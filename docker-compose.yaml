@@ -1,3 +1,6 @@
+networks:
+  gitea:
+    external: false
 
 volumes:
   my_video:
@@ -9,6 +12,14 @@ volumes:
   portainer_data:
     driver: local
 
+  gitea:
+    driver_opts:
+      type: ext4
+      o: bind
+      device: /mnt/disk1/data/gitea_data
+  gitea_db:
+    driver: local
+
 services:
   storage:
     image: filebrowser/filebrowser
@@ -16,6 +27,7 @@ services:
       - "8000:80"
     volumes:
       - my_video:/srv/video
+      - gitea:/srv/gitea_data
   portainer:
     image: portainer/portainer
     ports:
@@ -23,3 +35,38 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - portainer_data:/data
+
+  gitea-server:
+    image: gitea/gitea:1.22.1
+    container_name: gitea
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - GITEA__database__DB_TYPE=postgres
+      - GITEA__database__HOST=gitea-db:5432
+      - GITEA__database__NAME=gitea
+      - GITEA__database__USER=gitea
+      - GITEA__database__PASSWD=gitea
+    restart: always
+    networks:
+      - gitea
+    volumes:
+      - gitea:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "3000:3000"
+      - "222:22"
+    depends_on:
+        - gitea-db
+  gitea-db:
+    image: postgres:14
+    restart: always
+    environment:
+      - POSTGRES_USER=gitea
+      - POSTGRES_PASSWORD=gitea
+      - POSTGRES_DB=gitea
+    networks:
+      - gitea
+    volumes:
+      - gitea_db:/var/lib/postgresql/data
