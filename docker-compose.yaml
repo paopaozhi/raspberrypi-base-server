@@ -1,0 +1,25 @@
+
+volumes:
+  my_video:
+    driver_opts:
+      type: ext4
+      o: bind
+      device: /mnt/disk1/video
+
+  portainer_data:
+    driver: local
+
+services:
+  storage:
+    image: filebrowser/filebrowser
+    ports:
+      - "8000:80"
+    volumes:
+      - my_video:/srv/video
+  portainer:
+    image: portainer/portainer
+    ports:
+      - 8001:9000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
